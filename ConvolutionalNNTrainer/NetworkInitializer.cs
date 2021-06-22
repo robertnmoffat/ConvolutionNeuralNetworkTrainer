@@ -159,9 +159,56 @@ namespace ConvolutionalNNTrainer
             network.weights[1].values = new float[secondWeightCount];
 
             //output layer and weights
+            network.biases[2].values = new float[outputNeuronCount];
             network.outputs.values = new float[outputNeuronCount];
-            network.softMaxOutputs.values = new float[outputNeuronCount];
+            network.activatedOutputs.values = new float[outputNeuronCount];
             network.weights[2].values = new float[thirdWeightCount];            
+        }
+
+        public static void resetNetworkNeurons(ref CNN network)
+        {
+            //convolved post filter
+            for (int i = 0; i < firstFilterLayerCount; i++)
+            {
+                network.convolutedLayers[0].squares[i].values = new float[firstConvolutionWidth, firstConvolutionWidth];
+
+                network.activatedConvolutedLayers[0].squares[i].values = new float[firstConvolutionWidth, firstConvolutionWidth];
+            }
+
+            //first downsample
+            for (int i = 0; i < firstFilterLayerCount; i++)
+            {
+                network.downsampledLayers[0].squares[i].values = new float[firstDownsampleWidth, firstDownsampleWidth];
+            }
+
+            //second convolved post filter
+            for (int i = 0; i < secondConvolutionCount; i++)
+            {
+                network.convolutedLayers[1].squares[i].values = new float[secondConvolutionWidth, secondConvolutionWidth];
+
+                network.activatedConvolutedLayers[1].squares[i].values = new float[secondConvolutionWidth, secondConvolutionWidth];
+            }
+
+            //second downsample
+            for (int i = 0; i < secondConvolutionCount; i++)
+            {
+                network.downsampledLayers[1].squares[i].values = new float[secondDownsampleWidth, secondDownsampleWidth];
+            }
+
+            //first fully connected
+            network.hiddenNeurons = new SingleDimension[hiddenLayerCount];
+            network.activatedHiddenNeurons = new SingleDimension[hiddenLayerCount];
+            network.hiddenNeurons[0].values = new float[firstHiddenLayerNeuronCount];
+            network.activatedHiddenNeurons[0].values = new float[firstHiddenLayerNeuronCount];
+
+
+            //second fully connected
+            network.hiddenNeurons[1].values = new float[secondHiddenLayerNeuronCount];
+            network.activatedHiddenNeurons[1].values = new float[secondHiddenLayerNeuronCount];
+
+            //output layer and weights
+            network.outputs.values = new float[outputNeuronCount];
+            network.activatedOutputs.values = new float[outputNeuronCount];
         }
 
         static public void randomizeWeights(ref CNN network) {
@@ -230,6 +277,8 @@ namespace ConvolutionalNNTrainer
          */
         public static float NextGaussian()
         {
+            return nextRando();
+
             float v1, v2, s;
             do
             {
@@ -241,6 +290,10 @@ namespace ConvolutionalNNTrainer
             s = (float)Math.Sqrt((-2.0f * Math.Log(s)) / s);
 
             return v1 * s;
+        }
+
+        public static float nextRando() {
+            return (float)rnd.NextDouble() - 0.5f;
         }
 
         static public bool isSkippedFilter(int pos) {
