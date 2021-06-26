@@ -65,6 +65,7 @@ namespace ConvolutionalNNTrainer
                 float correct = 0;
                 float guesstotal = 0;
                 int trainingRounds = 0;
+                float lastErr = 0.0f;
                 Bitmap bitmap;
                 while (true)
                 {
@@ -94,12 +95,15 @@ namespace ConvolutionalNNTrainer
                         epochCounter++;
                         if (epochCounter > batchsize)
                         {
-                            if (crossEntropy / batchsize > (totalErr / i) * 2)
-                                trainingRate /= crossEntropy / batchsize - (totalErr / i);
-                            else
+                            float error = crossEntropy / batchsize;
+                            if (error > (totalErr / i) * 2)
+                                trainingRate /= error - (totalErr / i);
+                            else if (lastErr > error)
                                 trainingRate += 0.001f;
-                            if (trainingRate < 0.01f)
-                                trainingRate = 0.01f;
+                            else
+                                trainingRate -= 0.001f;
+
+                            lastErr = error;
 
                             Console.WriteLine("Error:" + crossEntropy / batchsize);
                             totalErr += crossEntropy;

@@ -36,8 +36,9 @@ namespace ConvolutionalNNTrainer
             NetworkInitializer.InitializeNetwork(ref errorsAvg);
 
             CNN net = new CNN();
-            NetworkInitializer.InitializeNetwork(ref net);
-            NetworkInitializer.randomizeWeights(ref net);
+            //NetworkInitializer.InitializeNetwork(ref net);
+            net = FileIO.loadNet(Application.StartupPath + @"\savedNet");
+            //NetworkInitializer.randomizeWeights(ref net);
 
             float crossEntropy = 0.0f;
             float totalErr = 0.0f;
@@ -76,19 +77,8 @@ namespace ConvolutionalNNTrainer
 
                     epochCounter++;
                     if (epochCounter > batchsize)
-                    {
-                        float error = crossEntropy / batchsize;
-                        if (error > (totalErr / i) * 2)
-                            trainingRate /= error - (totalErr / i);
-                        else if (lastErr > error)
-                            trainingRate += 0.001f;
-                        else
-                            trainingRate -= 0.001f;
-
-                        lastErr = error;
-
-                        if (trainingRate < 0.00001f)
-                            trainingRate = 0.00001f;
+                    {    
+                        float error = crossEntropy / batchsize;                        
 
                         Console.WriteLine("Error:" + error);
                         totalErr += crossEntropy;
@@ -106,6 +96,9 @@ namespace ConvolutionalNNTrainer
                     }
                 }
                 trainingRounds++;
+
+                FileIO.saveNet(net, Application.StartupPath + @"\savedNet");
+                //FileIO.loadNet(Application.StartupPath + @"\savedNet");
             }
             Console.WriteLine("Done.");
             for (int i = 0; i < 100; i++)

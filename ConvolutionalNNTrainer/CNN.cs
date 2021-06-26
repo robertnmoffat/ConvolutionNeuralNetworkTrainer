@@ -72,6 +72,20 @@ namespace ConvolutionalNNTrainer
                 biases[1].values[i] -= adjustNet.biases[1].values[i];
             }
 
+            for (int i = 0; i < filterLayers[0].squares.Length; i++)
+            {
+
+                filterLayers[0].squares[i].width = adjustNet.filterLayers[0].squares[i].width;//Set widths equal so that it copies 0 values on skipped filters.
+
+                for (int y = 0; y < adjustNet.filterLayers[0].squares[i].width; y++)
+                {
+                    for (int x = 0; x < adjustNet.filterLayers[0].squares[i].width; x++)
+                    {
+                        filterLayers[0].squares[i].values[x, y] -= adjustNet.filterLayers[0].squares[i].values[x, y];
+                    }
+                }
+            }
+
             for (int i = 0; i < filterLayers[1].squares.Length; i++) {
 
                 filterLayers[1].squares[i].width = adjustNet.filterLayers[1].squares[i].width;//Set widths equal so that it copies 0 values on skipped filters.
@@ -83,16 +97,32 @@ namespace ConvolutionalNNTrainer
                 }
             }
 
-            for (int i = 0; i < convolutedLayers.Length; i++) {
-                for (int j = 0; j < convolutedLayers[i].squares.Length; j++) {
-                    for (int y = 0; y < convolutedLayers[i].squares[j].width; y++) {
-                        for (int x = 0; x < convolutedLayers[i].squares[j].width; x++) {
-                            convolutedLayers[i].squares[j].biases[x, y] -= adjustNet.convolutedLayers[i].squares[j].biases[x, y];
-                        }
+                
+            for (int j = 0; j < convolutedLayers[0].squares.Length; j++) {                  
+                for (int y = 0; y < convolutedLayers[0].squares[0].width; y++) {                    
+                    for (int x = 0; x < convolutedLayers[0].squares[0].width; x++) {            
+                        convolutedLayers[0].squares[j].biases[x, y] -= adjustNet.convolutedLayers[0].squares[j].biases[x, y];          
+                    }        
+                }       
+            }
+            for (int j = 0; j < convolutedLayers[1].squares.Length; j++)
+            {
+                for (int y = 0; y < convolutedLayers[1].squares[0].width; y++)
+                {
+                    for (int x = 0; x < convolutedLayers[1].squares[0].width; x++)
+                    {
+                        convolutedLayers[1].squares[j].biases[x, y] -= adjustNet.convolutedLayers[1].squares[j].biases[x, y];
                     }
                 }
             }
+        }
 
+
+        
+
+
+        public void saveNetToFile(string filename) {
+            
         }
     }
 }

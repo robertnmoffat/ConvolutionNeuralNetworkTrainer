@@ -65,6 +65,7 @@
   <ItemGroup>
     <Compile Include="BackPropagation.cs" />
     <Compile Include="CNN.cs" />
+    <Compile Include="FileIO.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
