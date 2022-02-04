@@ -7,10 +7,16 @@ using System.Threading.Tasks;
 
 namespace ConvolutionalNNTrainer
 {
+    /// <summary>
+    /// Struct representing a single layer of values in the neural network.
+    /// </summary>
     struct SingleDimension {
         public float[] values;
     }
 
+    /// <summary>
+    /// Struct represending a square matrix in the neural network. Either an image or filter.
+    /// </summary>
     struct Square{
         public int width;
         public float[,] values;
@@ -24,10 +30,16 @@ namespace ConvolutionalNNTrainer
         }
     };
 
+    /// <summary>
+    /// Struct representing a single layer of Square objects in the network.
+    /// </summary>
     struct SquareLayer {
         public Square[] squares;
     }
 
+    /// <summary>
+    /// Class representing a convolutional neural network and all the values within.
+    /// </summary>
     class CNN
     {
         public Square input;
@@ -50,6 +62,10 @@ namespace ConvolutionalNNTrainer
         public CNN() {
         }
 
+        /// <summary>
+        /// Subtract from weights an biases by the amount stored in the passed CNN object at their coresponding positions.
+        /// </summary>
+        /// <param name="adjustNet"></param>
         public void adjustWeights(CNN adjustNet) {
             for (int i=0; i<weights[0].values.Length; i++) {
                 weights[0].values[i] -= adjustNet.weights[0].values[i];
@@ -118,11 +134,5 @@ namespace ConvolutionalNNTrainer
         }
 
 
-        
-
-
-        public void saveNetToFile(string filename) {
-            
-        }
     }
 }

@@ -7,8 +7,17 @@ using System.Threading.Tasks;
 
 namespace ConvolutionalNNTrainer
 {
+    /// <summary>
+    /// Class containing static methods to load and save convolutional neural network.
+    /// </summary>
     class FileIO
     {
+        /// <summary>
+        /// Converts 4 bytes to a float.
+        /// </summary>
+        /// <param name="bytes">Array containing the bytes to convert.</param>
+        /// <param name="startPos">Position of first of 4 bytes to convert.</param>
+        /// <returns></returns>
         public static float convertBytesToFloat(byte[] bytes, int startPos) {
             byte[] ar;
             ar = new[] { bytes[startPos], bytes[startPos+1], bytes[startPos+2], bytes[startPos+3] };
@@ -16,6 +25,12 @@ namespace ConvolutionalNNTrainer
             return num;
         }
 
+        /// <summary>
+        /// Converts a float to 4 bytes.
+        /// </summary>
+        /// <param name="bytes">Byte array to hold the bytes.</param>
+        /// <param name="pos">Starting position in the array to add the bytes.</param>
+        /// <param name="toAdd">Float to be converted.</param>
         public static void addFloatToByteArray(ref byte[] bytes, ref int pos, float toAdd)
         {
             byte[] floatHolder = new byte[4];
@@ -27,6 +42,11 @@ namespace ConvolutionalNNTrainer
             }
         }
 
+        /// <summary>
+        /// Loads a neural network file into a CNN object.
+        /// </summary>
+        /// <param name="path">Path to the neural net file.</param>
+        /// <returns>CNN object representing the saved neural net.</returns>
         public static CNN loadNet(string path) {
             CNN network = new CNN();
             NetworkInitializer.InitializeNetwork(ref network);
@@ -116,10 +136,15 @@ namespace ConvolutionalNNTrainer
             return network;
         }
 
+        /// <summary>
+        /// Save a CNN object to file.
+        /// </summary>
+        /// <param name="network">CNN object of network to save.</param>
+        /// <param name="path">Path and filename of where to save network.</param>
         public static void saveNet(CNN network, string path)
         {
 
-            byte version = (byte)1;
+            byte version = (byte)2;
 
             byte[] bytes;
             int totalSize = 1;//starts at 1 for version number
@@ -219,7 +244,11 @@ namespace ConvolutionalNNTrainer
             compareNets(network, loadedNet);
         }
 
-
+        /// <summary>
+        /// Compares to CNN objects to ensure that they have matching parameters.
+        /// </summary>
+        /// <param name="net1">First network.</param>
+        /// <param name="net2">Second network.</param>
         public static void compareNets(CNN net1, CNN net2)
         {
             if (net1.filterLayers.Length != net2.filterLayers.Length)

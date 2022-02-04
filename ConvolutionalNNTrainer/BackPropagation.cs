@@ -6,46 +6,51 @@ using System.Threading.Tasks;
 
 namespace ConvolutionalNNTrainer
 {
+    /// <summary>
+    /// Contains the methods used in backpropagating a neural network.
+    /// </summary>
     class BackPropagation
     {
 
-
+        /// <summary>
+        /// Backpropagates errors through a neural network.
+        /// </summary>
+        /// <param name="net">Network to be backpropagated.</param>
+        /// <param name="errors">Network to store errors in while backpropagating.</param>
+        /// <param name="errorsAvg">Network containing averaged adjustments to weights and biases.</param>
+        /// <param name="batchSize">Batch size to average adjustments by.</param>
+        /// <param name="correctDigit">The currently desired output of the network.</param>
+        /// <param name="learningRate">Learning rate to multiply adjustments by.</param>
+        /// <returns></returns>
         static public float backPropagate(in CNN net, ref CNN errors, ref CNN errorsAvg, int batchSize, int correctDigit, float learningRate) {
-            if (correctDigit == 10)
-                correctDigit = 0;
 
-            float[] desiredOutput = new float[10];            
+            float[] desiredOutput = new float[11];            
             desiredOutput[correctDigit] = 1.0f;
 
             //---------------------calculate total error
-            float crossEntropy = 0.0f;
+            float totalError = 0.0f;
             for (int i=0; i<net.activatedOutputs.values.Length; i++) {
                 float y = desiredOutput[i];
                 float o = net.activatedOutputs.values[i];
-                //crossEntropy += (y * (float)Math.Log(o)) + ((1 - y) * (float)Math.Log(1 - o));
-                crossEntropy += (float)Math.Pow((o-y),2);
+                totalError += (float)Math.Pow((o-y),2)/11;
             }
 
             //---------------------calculate error in outputs
             for (int i = 0; i < net.outputs.values.Length; i++) {
-                //errors.activatedOutputs.values[i] = crossEntropyDerivative(desiredOutput[i], net.activatedOutputs.values[i]);
-                //errors.outputs.values[i] = softMaxDerivative(i, net.outputs.values);
                 errors.activatedOutputs.values[i] = 1;
                 errors.outputs.values[i] = costFunctionDerivative(desiredOutput[i], net.activatedOutputs.values[i]);
+                errors.outputs.values[i] *= (float)sigmoidDerivative(net.activatedOutputs.values[i]);
                 errorsAvg.biases[2].values[i] += errors.activatedOutputs.values[i] * errors.outputs.values[i] / batchSize * learningRate;
             }
 
             //------------------calculate error in third layer of weights
-            //int weightPos = 0; ;//offset for weight positioning
             for (int i = 0; i < net.outputs.values.Length; i++)
             {
                 for (int j = 0; j < net.hiddenNeurons[1].values.Length; j++)
                 {
                     //derivative of current weight * softmax derivative * cross entropy derivative
                     errors.weights[2].values[j * net.outputs.values.Length + i] = net.hiddenNeurons[1].values[j] * errors.outputs.values[i] * errors.activatedOutputs.values[i];
-                    errorsAvg.weights[2].values[j * net.outputs.values.Length + i] += errors.weights[2].values[j * net.outputs.values.Length + i] / batchSize * learningRate;//store of average weights
-                    
-                    //weightPos++;
+                    errorsAvg.weights[2].values[j * net.outputs.values.Length + i] += errors.weights[2].values[j * net.outputs.values.Length + i] / batchSize * learningRate;//store of average weights                    
                 }
             }
 
@@ -128,10 +133,13 @@ namespace ConvolutionalNNTrainer
                                     //if the values before and after activation are not equal then leaky relu was applied (* 0.1)
                                     if (net.convolutedLayers[1].squares[j].values[x * 2 + sx, y * 2 + sy] != net.activatedConvolutedLayers[1].squares[j].values[x * 2 + sx, y * 2 + sy])
                                     {
-                                        errors.convolutedLayers[1].squares[j].values[x * 2 + sx, y * 2 + sy] = errors.activatedConvolutedLayers[1].squares[j].values[x * 2 + sx, y * 2 + sy] * 0.1f;
+                                        errors.convolutedLayers[1].squares[j].values[x * 2 + sx, y * 2 + sy] = errors.activatedConvolutedLayers[1].squares[j].values[x * 2 + sx, y * 2 + sy] * 0.0f;
                                     }
                                     else {//else it was positive and relu simply multiplied by 1
-                                        errors.convolutedLayers[1].squares[j].values[x * 2 + sx, y * 2 + sy] = errors.activatedConvolutedLayers[1].squares[j].values[x * 2 + sx, y * 2 + sy];
+                                        if (net.convolutedLayers[1].squares[j].values[x * 2 + sx, y * 2 + sy] != 0.0f)
+                                            errors.convolutedLayers[1].squares[j].values[x * 2 + sx, y * 2 + sy] = errors.activatedConvolutedLayers[1].squares[j].values[x * 2 + sx, y * 2 + sy];
+                                        else
+                                            errors.convolutedLayers[1].squares[j].values[x * 2 + sx, y * 2 + sy] = 0;
                                     }
                                     sx = 2;
                                     sy = 2;
@@ -160,7 +168,7 @@ namespace ConvolutionalNNTrainer
                         applyFilterAdditivelyWithRates(net.downsampledLayers[0].squares[j], ref errors.convolutedLayers[1].squares[i], ref errorsAvg.filterLayers[1].squares[filterPos], batchSize, learningRate, ref errorsAvg.convolutedLayers[1].squares[i]);
                         Square mirroredFilter = mirrorFilter(in net.filterLayers[1].squares[filterPos]);//Flip filter to be applied to error to generate previous layer error.
                         //-----Error in first downsample layer-----
-                        applyFilterAdditivelyWithPadding(errors.convolutedLayers[1].squares[i], mirroredFilter, ref errors.downsampledLayers[0].squares[j], mirroredFilter.width - 1);
+                        applyFilterAdditivelyWithPadding(errors.convolutedLayers[1].squares[i], mirroredFilter, ref errors.downsampledLayers[0].squares[j]);
                     }
                     else {
                         errorsAvg.filterLayers[1].squares[filterPos].width = 0;//Set error filter width to 0 so that it is known not to use this filter.
@@ -194,11 +202,14 @@ namespace ConvolutionalNNTrainer
                                     //if the values before and after activation are not equal then leaky relu was applied (* 0.1)
                                     if (net.convolutedLayers[0].squares[j].values[x * 2 + sx, y * 2 + sy] != net.activatedConvolutedLayers[0].squares[j].values[x * 2 + sx, y * 2 + sy])
                                     {
-                                        errors.convolutedLayers[0].squares[j].values[x * 2 + sx, y * 2 + sy] = errors.activatedConvolutedLayers[0].squares[j].values[x * 2 + sx, y * 2 + sy] * 0.1f;
+                                        errors.convolutedLayers[0].squares[j].values[x * 2 + sx, y * 2 + sy] = errors.activatedConvolutedLayers[0].squares[j].values[x * 2 + sx, y * 2 + sy] * 0.0f;
                                     }
                                     else
                                     {//else it was positive and relu simply multiplied by 1
-                                        errors.convolutedLayers[0].squares[j].values[x * 2 + sx, y * 2 + sy] = errors.activatedConvolutedLayers[0].squares[j].values[x * 2 + sx, y * 2 + sy];
+                                        if (net.convolutedLayers[0].squares[j].values[x * 2 + sx, y * 2 + sy] != 0.0f)
+                                            errors.convolutedLayers[0].squares[j].values[x * 2 + sx, y * 2 + sy] = errors.activatedConvolutedLayers[0].squares[j].values[x * 2 + sx, y * 2 + sy];
+                                        else
+                                            errors.convolutedLayers[0].squares[j].values[x * 2 + sx, y * 2 + sy] = 0;
                                     }
                                     sx = 2;
                                     sy = 2;//set to skip checking rest of area.
@@ -220,50 +231,38 @@ namespace ConvolutionalNNTrainer
 
 
 
-            return crossEntropy;
+            return totalError;
         }
 
-        static public float totalError(CNN net, float[] desiredOutputs) {
-            float totalErr = 0.0f;
-            for (int i=0; i<desiredOutputs.Length; i++) {
-                totalErr += desiredOutputs[i] * (float)Math.Log(net.activatedOutputs.values[i]) + (1.0f - desiredOutputs[i]) * (float)Math.Log(1 - net.activatedOutputs.values[i]);
-            }
-            return totalErr;
+        /// <summary>
+        /// Returns the derivative of the cost function.
+        /// </summary>
+        /// <param name="desiredValue">What the output should be.</param>
+        /// <param name="output">What the output was.</param>
+        /// <returns>The value of the derivative of the cost function.</returns>
+        static private float costFunctionDerivative(float desiredValue, float output) {
+            return 2.0f * 1.0f / 11.0f * (output - desiredValue);
         }
 
-        static public float crossEntropyDerivative(float desiredValue, float netOutput) {
-            return -1 * (desiredValue * (1/netOutput) + (1 - desiredValue) * (1/(1-netOutput)));
-        }
-
-        static public float costFunctionDerivative(float desiredValue, float output) {
-            return 2 * (output-desiredValue);
-        }
-
-        static public float softMaxDerivative(int curErr, float[] errs) {
-            float powersSum=0.0f;
-            float upperSum = 0.0f;
-            float curPow=0.0f;
-
-            for (int i=0; i<errs.Length; i++) {
-                float epow = (float)Math.Pow(Math.E, errs[i]);
-                if (i == curErr)
-                {
-                    curPow = epow;
-                }
-                else {
-                    upperSum += epow;
-                }
-                powersSum += epow;
-            }
-
-            return curPow * upperSum / (powersSum * powersSum);
-        }
-
-        static public double sigmoidDerivative(float x) {
+        /// <summary>
+        /// Returns the derivative of the sigmoid function.
+        /// </summary>
+        /// <param name="x">Activation value after sigmoid was applied during forward propagation.</param>
+        /// <returns>The derivative value of the sigmoid function.</returns>
+        static private double sigmoidDerivative(float x) {
             return ForwardPropagation.sigmoid(x) * (1 - ForwardPropagation.sigmoid(x));
         }
 
-        static public void applyFilterAdditivelyWithRates(Square input, ref Square filter, ref Square convolution, int batchSize, float learningRate, ref Square biases)
+        /// <summary>
+        /// Applies a filter through convolution
+        /// </summary>
+        /// <param name="input">Input Square to have the filter applied to.</param>
+        /// <param name="filter">Filter Square to be applied to the input.</param>
+        /// <param name="convolution">Square containing the values post convolution.</param>
+        /// <param name="batchSize">Amount of rounds in the training batch to average the values by.</param>
+        /// <param name="learningRate">Learning rate to be multiplied to the values.</param>
+        /// <param name="biases">Biases to be applied to the filter.</param>
+        static private void applyFilterAdditivelyWithRates(Square input, ref Square filter, ref Square convolution, int batchSize, float learningRate, ref Square biases)
         {
             float positionSum = 0.0f;
             for (int posy = 0; posy < convolution.width; posy++)
@@ -285,7 +284,13 @@ namespace ConvolutionalNNTrainer
             }
         }
 
-        static public void applyFilterAdditivelyWithPadding(in Square input, in Square filter, ref Square convolution, int padding)
+        /// <summary>
+        /// Applies a filter through convolution with one space of padding.
+        /// </summary>
+        /// <param name="input">Input Square to have the filter applied to.</param>
+        /// <param name="filter">Filter Square to be applied to the input.</param>
+        /// <param name="convolution">Square containing the values post convolution.</param>
+        static private void applyFilterAdditivelyWithPadding(in Square input, in Square filter, ref Square convolution)
         {
             float positionSum = 0.0f;
             for (int posy = 0; posy < convolution.width; posy++)
@@ -306,16 +311,17 @@ namespace ConvolutionalNNTrainer
                         }
                     }
                     convolution.values[posx, posy] += positionSum;
-                    //filter.biases[posx, posy] = filter.values[posx, posy];
                 }
             }
         }
 
 
-        /**
-         * Mirrors a filter horizontally and vertically
-         */
-        public static Square mirrorFilter(in Square filter) {
+        /// <summary>
+        /// Mirrors filter horizontally and vertically.
+        /// </summary>
+        /// <param name="filter">Filter to be mirrored</param>
+        /// <returns>The mirrored filter.</returns>
+        private static Square mirrorFilter(in Square filter) {
             Square mirrored = new Square();
             mirrored.width = filter.width;
             mirrored.values = new float[mirrored.width, mirrored.width];

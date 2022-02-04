@@ -6,10 +6,17 @@ using System.Threading.Tasks;
 
 namespace ConvolutionalNNTrainer
 {
+    /// <summary>
+    /// Class for handling forward propagation of a CNN object.
+    /// </summary>
     class ForwardPropagation
     {
         static float positionSum = 0.0f;
 
+        /// <summary>
+        /// Propagate the input forward through the network to the output.
+        /// </summary>
+        /// <param name="net">Network object to be propagated.</param>
         static public void forwardPropagate(ref CNN net) {
             //----------first convolution layer
             for (int i = 0; i<net.filterLayers[0].squares.Length; i++)
@@ -77,22 +84,27 @@ namespace ConvolutionalNNTrainer
                 }
                 net.outputs.values[i] += net.biases[2].values[i];
                 //No bias in output layer
-                net.activatedOutputs.values[i] = net.outputs.values[i];//Copy over outputs so that softmax can be applied
+                net.activatedOutputs.values[i] =  (float)sigmoid(net.outputs.values[i]);//Copy over outputs so that softmax can be applied                
             }
             //softMax(ref net.activatedOutputs);
 
             int highestPos = -1;
             float highestVal = float.MinValue;
-            for (int i=0; i<net.outputs.values.Length; i++) {
-                if (net.outputs.values[i] > highestVal) {
-                    highestVal = net.outputs.values[i];
+            for (int i=0; i<net.activatedOutputs.values.Length; i++) {
+                if (net.activatedOutputs.values[i] > highestVal) {
+                    highestVal = net.activatedOutputs.values[i];
                     highestPos = i;
                 }
             }
             net.numberGuess = highestPos;
         }
 
-
+        /// <summary>
+        /// Apply a filter to an input, storing the output in a third object.
+        /// </summary>
+        /// <param name="input">Square object to be filtered.</param>
+        /// <param name="filter">Square object representing the filter to be applied convolutionally</param>
+        /// <param name="convolution">Square to store the filtered output</param>
         static public void applyFilter(Square input, Square filter, ref Square convolution)
         {
             for (int posy = 0; posy < convolution.width; posy++)
@@ -113,6 +125,12 @@ namespace ConvolutionalNNTrainer
             }
         }
 
+        /// <summary>
+        /// Apply a filter to an object, adding the output to a third object.
+        /// </summary>
+        /// <param name="input">Square object to be filtered.</param>
+        /// <param name="filter">Square object representing the filter to be applied convolutionally</param>
+        /// <param name="convolution">Square to store the filtered output</param>
         static public void applyFilterAdditively(Square input, Square filter, ref Square convolution)
         {
             for (int posy = 0; posy < convolution.width; posy++)
@@ -133,18 +151,23 @@ namespace ConvolutionalNNTrainer
             }
         }
 
+        /// <summary>
+        /// Apply sigmoid function to an input, generating an s shaped output.
+        /// </summary>
+        /// <param name="num">Number to run through the function.</param>
+        /// <returns>Value after applying sigmoid</returns>
         static public double sigmoid(float num) {
-            double epow = Math.Pow(Math.E, -num);
-            double log = Math.Log(Double.MaxValue);
-            if (num > Math.Log(Double.MaxValue)) {
-                //Console.WriteLine("Nan zone");
-            }
             double output = 1 / (1 + Math.Exp(-num));
-            if(output==0)
-                output = 1 / (1 + Math.Exp(709));
+            if(output==0)//if Math.Exp overflows, use the highest amount that will not cause an overflow
+                output = 1 / (1 + Math.Exp(-709));
             return output;
         }
 
+        /// <summary>
+        /// Find the greatest value in 2x2 subsections of a Square object and copy them into another Square object 
+        /// </summary>
+        /// <param name="inputLayer">Input object</param>
+        /// <param name="downsampled">Half sized Square object to be copied into.</param>
         static public void maxPool(Square inputLayer, ref Square downsampled) {
             for (int posy = 0; posy < downsampled.width; posy++)
             {
@@ -164,24 +187,16 @@ namespace ConvolutionalNNTrainer
             }
         }
 
+        /// <summary>
+        /// Filter a Square object, setting any values below 0 to 0
+        /// </summary>
+        /// <param name="input">Input Square object</param>
+        /// <param name="ouput">Square object which the positive values are copied into.</param>
         static public void reluSquare(Square input, ref Square ouput) {
             for (int y = 0; y < input.width; y++) {
                 for (int x=0; x<input.width; x++) {
-                    ouput.values[x, y] = input.values[x, y] >= 0 ? input.values[x, y] : 0.01f* input.values[x, y];//if less than zero set to zero else keep.
+                    ouput.values[x, y] = input.values[x, y] >= 0 ? input.values[x, y] : 0.0f* input.values[x, y];//if less than zero set to zero else keep.
                 }
-            }
-        }
-
-        static public void softMax(ref SingleDimension input) {
-            float sum = 0.0f;
-            for (int i = 0; i < input.values.Length; i++) {
-                sum+=(float)Math.Pow(Math.E, input.values[i]);
-            }
-            for (int i = 0; i < input.values.Length; i++)
-            {
-                float pow = (float)Math.Pow(Math.E, input.values[i]);
-                float value = pow / sum;
-                input.values[i] = value;
             }
         }
 

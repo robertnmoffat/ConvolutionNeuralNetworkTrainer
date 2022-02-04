@@ -7,40 +7,48 @@ using System.Threading.Tasks;
 
 namespace ConvolutionalNNTrainer
 {
+    /// <summary>
+    /// Class for initializing CNN values
+    /// </summary>
     class NetworkInitializer
     {
-        static Random rnd;
+        private static Random rnd;
 
-        static int firstFilterLayerCount = 6;
-        static int firstFilterWidth = 5;
+        private readonly static int firstFilterLayerCount = 6;
+        private readonly static int firstFilterWidth = 5;
 
-        static int firstConvolutionWidth = 28;
+        private readonly static int firstConvolutionWidth = 28;
 
-        static int firstDownsampleWidth = 14;
+        private readonly static int firstDownsampleWidth = 14;
 
-        //static int secondFilterCount = 59;        
-        static int secondFilterWidth = 5;
-        static int secondConvolutionCount = 16;
-        static int secondFilterCount = firstFilterLayerCount * secondConvolutionCount;
 
-        static int secondConvolutionWidth = 10;
+        private readonly static int secondFilterWidth = 5;
+        private readonly static int secondConvolutionCount = 16;
+        private readonly static int secondFilterCount = firstFilterLayerCount * secondConvolutionCount;
 
-        static int secondDownsampleWidth = 5;
+        private readonly static int secondConvolutionWidth = 10;
 
-        static int hiddenLayerCount = 2;
-        static int firstHiddenLayerNeuronCount = 120;
-        static int secondHiddenLayerNeuronCount = 100;
+        private readonly static int secondDownsampleWidth = 5;
 
-        static int firstWeightCount = secondDownsampleWidth * secondDownsampleWidth * //amount of pixels per downsampled image
+        private readonly static int hiddenLayerCount = 2;
+        private readonly static int firstHiddenLayerNeuronCount = 240;//120;
+        private readonly static int secondHiddenLayerNeuronCount = 200;//100;
+
+        private readonly static int firstWeightCount = secondDownsampleWidth * secondDownsampleWidth * //amount of pixels per downsampled image
                                     secondConvolutionCount * //amount of downsampled images
                                     firstHiddenLayerNeuronCount; //amount of neurons in next layer
 
-        static int secondWeightCount = firstHiddenLayerNeuronCount * secondHiddenLayerNeuronCount;//amount of neurons in first layer multiplied by amount in second layer
+        private readonly static int secondWeightCount = firstHiddenLayerNeuronCount * secondHiddenLayerNeuronCount;//amount of neurons in first layer multiplied by amount in second layer
 
-        static int outputNeuronCount = 10;
+        private readonly static int outputNeuronCount = 11;
 
-        static int thirdWeightCount = secondHiddenLayerNeuronCount * outputNeuronCount;//amount of neurons in last layer multiplied by amount of output neurons
+        private readonly static int thirdWeightCount = secondHiddenLayerNeuronCount * outputNeuronCount;//amount of neurons in last layer multiplied by amount of output neurons
 
+        /// <summary>
+        /// Set the input image (Bitmap) in the CNN object.
+        /// </summary>
+        /// <param name="network">Convolutional neural network object to be set</param>
+        /// <param name="input">Input image</param>
         public static void setInputs(ref CNN network, Bitmap input) {
             network.input.width = input.Width;
             network.input.values = new float[input.Width, input.Width];
@@ -50,11 +58,40 @@ namespace ConvolutionalNNTrainer
                     Color color = input.GetPixel(x, y);
                     float gray = (color.R + color.G + color.B) / 3;//average all three colour parameters to get greyscale
 
-                    network.input.values[x, y] = (gray/255)*2-1;//convert to percentage of full colour so that it is value between 1 and 0
+                    network.input.values[x, y] = gray > 0 ? 1.0f : 0.0f;//(gray/255)*2-1;//convert to percentage of full colour so that it is value between 1 and 0
                 }
             }
         }
 
+        /// <summary>
+        /// Set the input image as a byte array in the CNN object.
+        /// </summary>
+        /// <param name="network">Convolutional neural network object to be set</param>
+        /// <param name="input">Input bytes</param>
+        public static void setInputs(ref CNN network, byte[,] input)
+        {
+            network.input.width = 32;
+            network.input.values = new float[32,32]; ;
+
+            for (int y = 0; y < network.input.width; y++)
+            {
+                for (int x = 0; x < network.input.width; x++)
+                {
+                    if (x < 2 || y < 2 || x >= 30 || y >= 30) {
+                        network.input.values[x, y] = -1;
+                        continue;
+                    }
+                    float num = input[x - 2, y - 2];
+                    num = num / 255;
+                    network.input.values[x, y] = num * 2 - 1;//convert to percentage of full colour so that it is value between 1 and 0
+                }
+            }
+        }
+
+        /// <summary>
+        /// Initializes the structure of the neural network object according to the parameters in this class.
+        /// </summary>
+        /// <param name="network">Network to be initialized</param>
         public static void InitializeNetwork(ref CNN network){
             network.filterLayers = new SquareLayer[2];
             network.convolutedLayers = new SquareLayer[2];
@@ -165,6 +202,10 @@ namespace ConvolutionalNNTrainer
             network.weights[2].values = new float[thirdWeightCount];            
         }
 
+        /// <summary>
+        /// Resets the values that are stored in the network object from the previous training 
+        /// </summary>
+        /// <param name="network">Network object to be reset.</param>
         public static void resetNetworkNeurons(ref CNN network)
         {
             //convolved post filter
@@ -211,6 +252,10 @@ namespace ConvolutionalNNTrainer
             network.activatedOutputs.values = new float[outputNeuronCount];
         }
 
+        /// <summary>
+        /// Randomizes the weights and biases for their initial state prior to training.
+        /// </summary>
+        /// <param name="network">Netowrk to be randomized</param>
         static public void randomizeWeights(ref CNN network) {
             rnd = new Random(DateTime.Now.Millisecond);
 
@@ -218,7 +263,7 @@ namespace ConvolutionalNNTrainer
             {
                 for (int y=0; y<firstFilterWidth; y++) {
                     for (int x=0; x<firstFilterWidth; x++) {
-                        network.filterLayers[0].squares[i].values[x, y] = NextGaussian();                        
+                        network.filterLayers[0].squares[i].values[x, y] = randValue();                        
                     }
                 }
 
@@ -236,7 +281,7 @@ namespace ConvolutionalNNTrainer
                 {
                     for (int x = 0; x < network.filterLayers[1].squares[i].width; x++)
                     {
-                        network.filterLayers[1].squares[i].values[x, y] = NextGaussian();
+                        network.filterLayers[1].squares[i].values[x, y] = randValue();
                     }
                 }
             }
@@ -253,14 +298,14 @@ namespace ConvolutionalNNTrainer
             }
 
             for (int i=0; i<firstWeightCount; i++) {
-                network.weights[0].values[i] = NextGaussian();
+                network.weights[0].values[i] = randValue();
             }
             for (int i = 0; i < firstHiddenLayerNeuronCount; i++) {
                 network.biases[0].values[i] = 0.0f;
             }
             for (int i = 0; i < secondWeightCount; i++)
             {
-                network.weights[1].values[i] = NextGaussian();
+                network.weights[1].values[i] = randValue();
             }
             for (int i = 0; i < secondHiddenLayerNeuronCount; i++)
             {
@@ -268,34 +313,23 @@ namespace ConvolutionalNNTrainer
             }
             for (int i = 0; i < thirdWeightCount; i++)
             {
-                network.weights[2].values[i] = NextGaussian();
+                network.weights[2].values[i] = randValue();
             }
         }
 
-        /*
-         
-         */
-        public static float NextGaussian()
-        {
-            return nextRando();
-
-            float v1, v2, s;
-            do
-            {
-                v1 = 2.0f * (float)rnd.NextDouble() - 1.0f;
-                v2 = 2.0f * (float)rnd.NextDouble() - 1.0f;
-                s = v1 * v1 + v2 * v2;
-            } while (s >= 1.0f || s == 0f);
-
-            s = (float)Math.Sqrt((-2.0f * Math.Log(s)) / s);
-
-            return v1 * s;
-        }
-
-        public static float nextRando() {
+        /// <summary>
+        /// Creates a random value between -0.5 and 0.5.
+        /// </summary>
+        /// <returns>Random value</returns>
+        public static float randValue() {
             return (float)rnd.NextDouble() - 0.5f;
         }
 
+        /// <summary>
+        /// Checks if this is a filter to be skipped.
+        /// </summary>
+        /// <param name="pos">Position of filter</param>
+        /// <returns>Whether or not this filter is skipped</returns>
         static public bool isSkippedFilter(int pos) {
             switch (pos) {
                 case 7:
